@@ -1,0 +1,48 @@
+---
+title: "Query XML"
+author: "Harshitha Yeddula"
+---
+
+```{r}
+library("XML")
+library("methods")
+
+path <- "C:/DBMS"
+xmlFile <- "Books-v3.xml"
+
+xmlDoc <- xmlParse(file = paste(path,xmlFile,sep="/"),validate=F)
+```
+
+```{r Question1}
+exp <- "//catalog/book[author='Galos, Mike']/title | //catalog/book[author='Galos, Mike']/price"
+output <- xpathSApply(xmlDoc, exp, xmlValue)
+print(paste(output))
+```
+
+```{r Question2}
+exp <- "//catalog/book[@id = 'bk109']/genre"
+output <- xpathSApply(xmlDoc, exp, xmlValue)
+print(paste(output))
+```
+
+```{r Question3}
+exp <- "//catalog/book[price = min(//catalog/book/price)]/title"
+output <- xpathSApply(xmlDoc, exp, xmlValue)
+print(paste(output))
+```
+
+```{r Question4}
+exp <- "//catalog/book[genre = 'Computer']/title | //catalog/book[genre = 'Computer']/price"
+output <- xpathSApply(xmlDoc, exp, xmlValue)
+print(paste(output))
+```
+
+```{r Question5}
+exp <- "count(//catalog/book[price < 5])"
+output <- xpathSApply(xmlDoc, exp, xmlValue)
+print(paste(output))
+```
+
+
+
+

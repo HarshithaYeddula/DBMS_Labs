@@ -1,0 +1,313 @@
+---
+title: "R Notebook"
+Author: YEDDULA HARSHITHA
+output: Assignment-6 - BUILD TRIGGERS.
+---
+
+```{r}
+
+library(RSQLite)
+
+fpath = "c:/DBMS/SQL/Databases/"
+dbfile = "MediaDB.db"
+
+# if database file already exists, we connect to it, otherwise
+# we create a new database
+
+dbcon <- dbConnect(RSQLite::SQLite(), paste0(fpath,dbfile))
+
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS Subject
+```
+
+
+```{sql connection=dbcon}
+CREATE TABLE Subject(
+  sid INTEGER NOT NULL,
+  subjectName TEXT,
+  PRIMARY KEY (sid)
+)
+
+```
+
+
+```{sql connection=dbcon}
+INSERT INTO Subject(sid, subjectName) VALUES
+(1, "ML"),
+(2, "SQL"),
+(3, "R"),
+(4, "JAVA");
+
+```
+
+
+
+```{sql connection=dbcon}
+SELECT * FROM Subject;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS SubjectLogs
+
+```
+
+I have created a SubjectLogs table to store all the updates that are done to the subject table using Triggers.
+
+
+```{sql connection=dbcon}
+
+CREATE TABLE SubjectLogs (
+	id INTEGER PRIMARY KEY,
+	old_id int,
+	new_id int,
+	old_subjectName TEXT,
+	new_subjectName TEXT,
+	user_action text,
+	created_at text
+);
+
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS log_subjectname_after_update
+
+```
+
+
+Triggers:
+
+Triggers are used to execute SQL scripts when an event occurs.Events can be INSERT, UPDATE, DELETE records into/from a table.
+
+SQL Scripts can:
+
+Decide to allow or abort operations.
+Manipulate operation before letting it go through.
+Do additional SQL operations as collateral side effects.
+
+Syantax:
+CREATE TRIGGER trigger_name trigger _time trigger_event ON table_name
+FOR EACH ROW
+BEGIN
+…
+END
+
+In the below example I have taken UPDATE Event. Whenever the Subject table is updated I am storing the information of the updated subjectname in the subject logs t able using TRIGGERS.
+
+I have created TRIGGER in order to store all the names for the particular SID. FOr example today SID can be ALgorithms but in future if we want to change the same Subject ID to different name which will be AdvancedAlgorithms then we can have log for that particular change and the time it is changed in order to keep track of all the information related to subject names for that particular SID.
+
+```{sql connection=dbcon}
+
+CREATE TRIGGER log_subjectname_after_update 
+   AFTER UPDATE ON Subject
+   WHEN old.subjectName <> new.subjectName
+BEGIN
+	INSERT INTO SubjectLogs (
+		old_id,
+		new_id,
+		old_subjectName,
+		new_subjectName,
+		user_action,
+		created_at
+	)
+VALUES
+	(
+	  old.sid,
+	  new.sid,
+	  old.subjectName,
+		new.subjectName,
+		'UPDATE',
+		DATETIME('NOW')
+	) ;
+END;
+
+```
+
+Update has been done to the subjectName where sid = 1 which is ALgorithms previously and the same is stored in the SUbjectLogs table using triggers.
+
+```{sql connection=dbcon}
+
+UPDATE Subject
+SET 
+ subjectName = 'AdavancedAlgorithms'
+WHERE sid = 1;
+
+```
+
+Update has been done to the subjectName where sid = 2 which is WebDevelopment previously and the same is stored in the SUbjectLogs table using triggers.
+
+```{sql connection=dbcon}
+
+UPDATE Subject
+SET 
+ subjectName = 'FULL STACK DEVELOPMENT'
+WHERE sid = 2;
+
+```
+
+
+```{sql connection=dbcon}
+SELECT * FROM Subject;
+```
+
+
+Displays all the logs performed when updating the Subject Table.
+
+```{sql connection=dbcon}
+SELECT * FROM SubjectLogs;
+```
+
+
+I am updating the SID from the Subject table for which constraint is not defined so this update log will not be available in the subject logs but still the update will be performed in the Subject table.
+
+```{sql connection=dbcon}
+
+UPDATE Subject
+SET 
+ sid = '5800'
+WHERE sid = 1;
+
+```
+
+
+checking whether update is done in the Subject table.
+
+```{sql connection=dbcon}
+SELECT * FROM Subject;
+```
+
+check whether the update to SID is logged in the subject logs table.
+
+
+```{sql connection=dbcon}
+SELECT * FROM SubjectLogs;
+```
+
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS Lesson
+```
+
+
+```{sql connection=dbcon}
+
+CREATE TABLE Lesson(
+  tid INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  lengthInHrs INTEGER NOT NULL,
+  subjectId INTEGER NOT NULL,
+  PRIMARY KEY (tid),
+  FOREIGN KEY (subjectId) REFERENCES Subject(sid)
+)
+
+
+```
+
+
+```{sql connection=dbcon}
+
+INSERT INTO Lesson(tid, title, lengthInHrs,subjectID) VALUES
+(1, "ALgorithms", 10, 1),
+(2, "WebDevelopment", 20, 2),
+(3, "ProgramDesignParadigm", 30, 3),
+(4, "DatabseManagementSystems", 40, 4);
+
+
+```
+
+
+```{sql connection=dbcon}
+SELECT * FROM Lesson;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS PrerequisiteLesson
+
+```
+
+```{sql connection=dbcon}
+CREATE TABLE PrerequisiteLesson(
+  pid INTEGER NOT NULL,
+  lessonId INTEGER NOT NULL REFERENCES Lesson(tid),
+  prerequisiteLessonId INTEGER NOT NULL references Lesson(tid),
+  PRIMARY KEY (pid)
+)
+
+```
+
+
+```{sql connection=dbcon}
+INSERT INTO PrerequisiteLesson(pid,lessonId,prerequisiteLessonId) VALUES
+(1, 1, 1),
+(2, 2, 1),
+(3, 3, 1),
+(4, 4, 1);
+
+```
+
+
+
+```{sql connection=dbcon}
+SELECT * FROM PrerequisiteLesson;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS Course
+```
+
+```{sql connection=dbcon}
+CREATE TABLE Course(
+  number TEXT NOT NULL,
+  title TEXT NOT NULL,
+  lengthInDays INTEGER NOT NULL,
+  PRIMARY KEY (number)
+)
+```
+
+```{sql connection=dbcon}
+
+INSERT INTO Course(number, title, lengthInDays) VALUES
+("CS5200", "DatabaseManagementSystems", 90),
+("CS5010", "ProgramDesignParadigm",60),
+("CS5800", "Algorithms",120),
+("CS5610", "WebDevelopment", 120);
+
+```
+
+```{sql connection=dbcon}
+SELECT * FROM Course;
+```
+
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS Unit
+```
+
+```{sql connection=dbcon}
+CREATE TABLE Unit(
+  number TEXT NOT NULL,
+  tid INTGER NOT NULL,
+  PRIMARY KEY (number, tid),
+  FOREIGN KEY (tid) REFERENCES Lesson(tid),
+  FOREIGN KEY (number) REFERENCES Course(number)
+)
+```
+
+
+```{sql connection=dbcon}
+
+INSERT INTO Unit(number, tid) VALUES
+("CS5200", 1),
+("CS5010", 2),
+("CS5800", 3),
+("CS5610", 4);
+
+```
+
+
+```{sql connection=dbcon}
+SELECT * FROM Unit;
+```
+
+

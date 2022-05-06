@@ -1,0 +1,33 @@
+---
+title: "Build Xml Structure"
+author: "Harshitha Yeddula"
+---
+
+```{r parsexml}
+library("XML")
+library("methods")
+
+path <- "C:/DBMS"
+xmlFile <- "Visit.xml"
+
+xmlDoc <- xmlParse(file = paste(path,xmlFile,sep="/"),validate=T)
+```
+
+```{r}
+# Finding the number of visits for page p600
+exp <- "count(//log/Visit[@pid='p600'])"
+numberOfVisits <- xpathSApply(xmlDoc, exp)
+print(paste("Number of visits for page p600 = ", numberOfVisits))
+```
+```{r}
+# Finding the number of visits for page p602
+exp <- "count(//log/Visit[@pid='p602'])"
+numberOfVisits <- xpathSApply(xmlDoc, exp)
+print(paste("Number of visits for page p602 = ", numberOfVisits))
+```
+```{r}
+# Finding the number of visits for page p601
+exp <- "count(//log/Visit[@pid='p601'])"
+numberOfVisits <- xpathSApply(xmlDoc, exp)
+print(paste("Number of visits for page p601 = ", numberOfVisits))
+```

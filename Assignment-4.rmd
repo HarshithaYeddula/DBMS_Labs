@@ -1,0 +1,81 @@
+---
+title: "Assignment- 4 - Query a Database with SQL"
+---
+
+```{r}
+library(RSQLite)
+
+fpath = "C:/DBMS/SQL/Databases/"
+dbfile = "MediaDB.db"
+
+# if database file already exists, we connect to it, otherwise
+# we create a new database
+dbcon <- dbConnect(RSQLite::SQLite(), paste0(fpath,dbfile))
+```
+
+#Connecting to Database
+```{r}
+dbExecute(dbcon, "PRAGMA foreign_keys = ON")
+```
+
+#Question-1
+```{sql connection=dbcon}
+SELECT LastName, City, State FROM customers JOIN invoices ON customers.CustomerId = invoices.CustomerId GROUP BY invoices.CustomerId;
+```
+# Question-2
+```{sql connection=dbcon}
+SELECT album.Title, artist.Name FROM albums AS album JOIN artists AS artist ON album.ArtistId = artist.ArtistId;
+```
+#Question-3
+```{sql connection=dbcon}
+SELECT customer.Country,COUNT(DISTINCT invoice.CustomerId) CUSTOMER_COUNT FROM invoices AS invoice JOIN customers AS customer USING(CustomerId) GROUP BY customer.Country ORDER BY customer.Country ASC;
+```
+
+#Question-4
+```{sql connection=dbcon}
+SELECT COUNT(DISTINCT customer.CustomerId) TOTAL_CUSTOMERS FROM customers AS customer WHERE customer.CustomerId NOT IN (SELECT DISTINCT CustomerId FROM invoices);
+```
+
+#Question-5
+```{sql connection=dbcon}
+SELECT album.Title FROM albums AS album WHERE album.Title LIKE '%symphony%';
+```
+
+#Question-6
+```{sql connection=dbcon}
+SELECT artists.Name AS Artists_Name,
+       SUM(tracks.UnitPrice) AS Total_Price 
+  FROM artists  JOIN albums 
+    ON artists.ArtistId = albums.ArtistId JOIN tracks
+    ON tracks.AlbumId = albums.AlbumId 
+GROUP BY artists.Name;
+
+```
+
+#Question-7
+```{sql connection=dbcon}
+SELECT artists.Name, count(tracks.TrackId) AS NUM_TRACKS FROM artists
+INNER JOIN albums ON artists.ArtistId = albums.ArtistId
+INNER JOIN tracks ON tracks.AlbumId = albums.AlbumId
+GROUP BY artists.ArtistId, artists.Name
+ORDER BY count(tracks.TrackId) DESC LIMIT 1;
+
+```
+
+#Question-8
+```{sql connection=dbcon}
+SELECT genre.Name, ROUND(((SUM(track.Milliseconds))/1000.0/3600),2) time_in_hrs FROM tracks AS track JOIN genres AS genre ON track.GenreId = genre.GenreId GROUP BY track.GenreId;
+
+```
+
+```{r}
+dbDisconnect(dbcon)
+
+```
+
+
+
+
+
+
+

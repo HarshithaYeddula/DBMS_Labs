@@ -1,0 +1,178 @@
+---
+Author: Rajesh Chinnaga
+title: "R Notebook"
+output: html_notebook
+---
+
+---
+Assumptions:
+1. We cannot have more than one author for a particular book.
+2. Author, genre and title are all dependend on the title. 
+3. Title of each book is unique.
+4. Every book has a unique id.
+---
+
+Making a connection with the database:
+```{r}
+library(RSQLite)
+dbpath <- "C:/DBMS/SQL/Databases"  #Path of database
+dbfile <- "BookDatebase.db"                 #Name of database
+
+dbcon <- dbConnect(RSQLite::SQLite(), paste0(dbpath, dbfile))
+```
+
+Q1] Create a normalized (BCNF) relational schema and visualize the schema in an ERD for the data in the XML file. Include the ERD in your R Notebook.
+```{r}
+knitr::include_graphics('https://imgur.com/xCBmUbu')
+```
+
+Q2] Create a SQLite database that implements the schema, i.e., define the tables with CREATE TABLE. Use SQL chunks in your R Notebook.
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS Book;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS Catalog;
+```
+
+
+
+Creating Book table:
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS Book(
+  title TEXT NOT NULL,
+  author TEXT NOT NULL,
+  genre TEXT NOT NULL,
+  desc TEXT NOT NULL,
+  PRIMARY KEY(title)
+)
+```
+
+
+Creating Catalog table:
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS Catalog(
+  id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  price TEXT NOT NULL,
+  pub_date TEXT NOT NULL,
+  edition NUMBER,
+  PRIMARY KEY(id, title)
+)
+```
+
+Q3] Load the XML data from the file into R data frames; you will need to use either node-by-node traversal of the XML tree or a combination of node-by-node traversal with XPath; you likely will not be able to accomplish it with only XPath. Use surrogate keys and/or the ID attributes in the XML to establish relationships.
+
+Loading required libraries:
+```{r}
+library(DBI)
+library(XML)
+```
+
+Loading our XML file:
+```{r parseXML}
+path <- "C:/DBMS"  #Path of the XML file
+xmlFile <- "Books-v3.xml"                 #Name of the  XML file
+
+xmlDoc <- xmlParse(validate = F, file = paste(path,xmlFile,sep="/"))  #Parsing the XML file
+r <- xmlRoot(xmlDoc)
+xmlObj <- xmlDoc
+```
+
+Loading XML file into data frames:
+
+Loading data for the book table:
+```{r}
+xpathEx1 <- "//title"
+book <-data.frame(xpathSApply(xmlObj,xpathEx1,xmlValue))
+names(book)[1] <- "title"
+
+xpathEx1 <- "//author"
+author <-xpathSApply(xmlObj,xpathEx1,xmlValue)
+book$author <- author
+
+xpathEx1 <- "//genre"
+genre <-xpathSApply(xmlObj,xpathEx1,xmlValue)
+book$genre <- genre
+
+xpathEx1 <- "//description"
+desc <-xpathSApply(xmlObj,xpathEx1,xmlValue)
+book$desc <- desc
+book <- book[!duplicated(book), ]
+```
+
+Loading data for the Catalog Table
+```{r}
+xpathEx2 <- "//book[@id]"
+catalog <-data.frame(xpathSApply(xmlObj,xpathEx2,xmlGetAttr,"id"))
+names(catalog)[1] <- "id"
+
+xpathEx2 <- "//title"
+title <-xpathSApply(xmlObj,xpathEx2,xmlValue)
+catalog$title <- title
+
+xpathEx2 <- "//price"
+price <-xpathSApply(xmlObj,xpathEx2,xmlValue)
+catalog$price <- price
+
+xpathEx2 <- "//publish_date"
+pub_date <-xpathSApply(xmlObj,xpathEx2,xmlValue)
+catalog$pub_date <- pub_date
+
+xpathEx2 <- "//edition"
+e1 <-xpathSApply(xmlObj,xpathEx2,xmlValue)
+e2 <-xpathSApply(xmlObj,"//book[edition][@id]", xmlGetAttr, "id")
+catalog$edition <-NA
+catalog[catalog$id==e2, ]$edition<-e1
+```
+
+Q4] Transform data types as necessary and then save the data frames to the appropriate tables in the database using a strategy of your choice (e.g., dbWriteTable()).
+
+```{r}
+dbWriteTable(dbcon, "Book",book, append=T,row.names=F)
+dbWriteTable(dbcon, "Catalog",catalog, append=T,row.names=F)
+```
+
+Q5] Once the data from the XML is in the database, build SQL chunks for the following queries:
+
+A. 
+```{sql connection=dbcon}
+SELECT COUNT(genre) as "Genre_Count "
+  FROM (SELECT COUNT(*) as genre
+  FROM Book
+  GROUP BY genre
+  HAVING count(*)>=3
+  )
+
+```
+
+
+B. 
+
+```{sql connection=dbcon}
+SELECT strftime('%Y', MAX(pub_date)) as "Most_recent_year"
+FROM Book INNER JOIN Catalog ON Book.title = Catalog.title
+```
+
+
+C.
+
+```{sql connection=dbcon}
+SELECT genre,COUNT(*) as "no_of_books", avg(price) as "avg_price"
+FROM Book INNER JOIN Catalog ON Book.title=Catalog.title
+GROUP BY genre
+```
+
+
+D.
+```{sql connection=dbcon}
+SELECT Catalog.title, author, price
+FROM Book INNER JOIN Catalog ON Book.title=Catalog.title
+WHERE 
+price < 0.8*( SELECT avg(price) FROM Catalog)
+AND 
+price > 1.2*( SELECT avg(price) FROM Catalog)
+```
+
+
